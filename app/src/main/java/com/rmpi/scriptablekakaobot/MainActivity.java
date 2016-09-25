@@ -13,6 +13,8 @@ import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.Switch;
 import org.mozilla.javascript.Function;
+import org.mozilla.javascript.*;
+import android.os.*;
 
 public class MainActivity extends AppCompatActivity {
     private static String PREFS_KEY = "bot";
@@ -30,11 +32,12 @@ public class MainActivity extends AppCompatActivity {
         Switch onOffSwitch = (Switch) findViewById(R.id.switch1);
         onOffSwitch.setChecked(getOn(this));
         onOffSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton v, boolean b) {
-                putOn(getApplicationContext(), b);
-            }
-        });
+				@Override
+				public void onCheckedChanged(CompoundButton v, boolean b) {
+					putOn(getApplicationContext(), b);
+				}
+			});
+		KakaotalkListener.setContext(this);
     }
 
     public void onSettingsClick(View v) {
@@ -53,12 +56,12 @@ public class MainActivity extends AppCompatActivity {
                 granted = false;
                 requestPermissions(new String[] { Manifest.permission.READ_EXTERNAL_STORAGE }, 1);
                 Thread permChecker = new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        long currTime = System.currentTimeMillis();
-                        while(!granted) if (System.currentTimeMillis() - currTime > 10000) MainActivity.this.finish();
-                    }
-                });
+						@Override
+						public void run() {
+							long currTime = System.currentTimeMillis();
+							while(!granted) if (System.currentTimeMillis() - currTime > 10000) MainActivity.this.finish();
+						}
+					});
                 permChecker.start();
 
                 try {
@@ -84,4 +87,13 @@ public class MainActivity extends AppCompatActivity {
     private static void putOn(Context ctx, boolean value) {
         ctx.getSharedPreferences(PREFS_KEY, MODE_PRIVATE).edit().putBoolean(ON_KEY, value).apply();
     }
+	public static void UIThread(final Function object) {
+		Handler handler = new Handler(Looper.getMainLooper());
+		handler.postDelayed(new Runnable() {
+				@Override
+				public void run() {
+					object.call(KakaotalkListener.getScriptContext(), KakaotalkListener.getScope(), KakaotalkListener.getScope(), new Object[] {});
+				}
+			}, 0);
+	}
 }

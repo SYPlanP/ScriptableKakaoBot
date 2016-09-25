@@ -17,12 +17,17 @@ import org.mozilla.javascript.annotations.JSStaticFunction;
 
 import java.io.File;
 import java.io.FileReader;
+import android.widget.Toast;
 
 public class KakaotalkListener extends NotificationListenerService {
     private static Function responder;
     private static ScriptableObject execScope;
     private static Notification.Action lastSession;
     private static android.content.Context execContext;
+
+	public static void setContext(android.content.Context ctx) {
+		execContext = ctx;
+	}
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
@@ -35,8 +40,8 @@ public class KakaotalkListener extends NotificationListenerService {
             for (Notification.Action act : wExt.getActions())
                 if (act.getRemoteInputs() != null && act.getRemoteInputs().length > 0)
                     if (act.title.toString().toLowerCase().contains("reply") ||
-                            act.title.toString().toLowerCase().contains("Reply") ||
-                            act.title.toString().toLowerCase().contains("답장")) {
+						act.title.toString().toLowerCase().contains("Reply") ||
+						act.title.toString().toLowerCase().contains("답장")) {
                         execContext = getApplicationContext();
                         lastSession = act;
                         callResponder(sbn.getNotification().extras.getString("android.title"), sbn.getNotification().extras.get("android.text"));
@@ -57,7 +62,10 @@ public class KakaotalkListener extends NotificationListenerService {
             ScriptableObject.defineClass(scope, Kakaotalk.class);
             execScope = scope;
             script_real.exec(parseContext, scope);
-            responder = (Function) scope.get("response", scope);
+			Object tag = scope.get("response", scope);
+			if(tag != null) {
+				responder = (Function) tag;
+			}
             Context.exit();
         } catch (Exception e) {
             Log.e("parser", "?", e);
@@ -86,7 +94,14 @@ public class KakaotalkListener extends NotificationListenerService {
         responder.call(parseContext, execScope, execScope, new Object[] { room, _msg, sender });
     }
 
-    public static class Kakaotalk extends ScriptableObject {
+	public static Context getScriptContext() {
+		return Context.enter();
+	}
+	public static ScriptableObject getScope() {
+		return execScope;
+	}
+
+	public static class Kakaotalk extends ScriptableObject {
         public Kakaotalk() {
             super();
         }
@@ -110,5 +125,13 @@ public class KakaotalkListener extends NotificationListenerService {
 
             }
         }
+		@JSStaticFunction
+		public static android.content.Context getContext() {
+			return execContext;
+		}
+		@JSStaticFunction
+		public static void Toast(String str) {
+			Toast.makeText(execContext, str, Toast.LENGTH_SHORT).show();
+		}
     }
 }
